@@ -23,6 +23,10 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/DepthAnything "$APP/Contents/MacOS/"
 xcrun coremlcompiler compile "Models/$MODEL.mlpackage" "$APP/Contents/Resources" >/dev/null
+# AppIcon.icon is an Icon Composer document: Assets.car (Liquid Glass on macOS 26+) plus AppIcon.icns for older systems.
+xcrun actool AppIcon.icon --compile "$APP/Contents/Resources" --app-icon AppIcon --include-all-app-icons \
+    --platform macosx --target-device mac --minimum-deployment-target "$MIN_MACOS" \
+    --output-partial-info-plist "$(mktemp -t depthanything-icon)" >/dev/null
 
 cat > "$APP/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -31,6 +35,8 @@ cat > "$APP/Contents/Info.plist" <<EOF
 <dict>
     <key>CFBundleExecutable</key><string>DepthAnything</string>
     <key>CFBundleIdentifier</key><string>com.depthanything.mac</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
+    <key>CFBundleIconName</key><string>AppIcon</string>
     <key>CFBundleName</key><string>Depth Anything</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>1.0</string>
