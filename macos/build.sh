@@ -1,11 +1,12 @@
 #!/bin/zsh
-# Builds build/Depth Anything.app: downloads Apple's Core ML port of Depth-Anything-V2-Small if missing,
-# compiles it and bundles it with the SwiftUI app.
+# Builds build/Depth Anything.app: downloads Apple's Core ML port of Depth-Anything-V2-Small and converts
+# Video-Depth-Anything-Small to Core ML if missing, compiles both and bundles them with the SwiftUI app.
 set -euo pipefail
 cd "${0:A:h}"
 
 MIN_MACOS=14.0
 MODEL=DepthAnythingV2SmallF16
+VIDEO_MODEL=VideoDepthAnythingSmallF16
 APP="build/Depth Anything.app"
 
 if [[ ! -d Models/$MODEL.mlpackage ]]; then
@@ -14,15 +15,19 @@ if [[ ! -d Models/$MODEL.mlpackage ]]; then
         curl -fL --create-dirs -o "Models/$MODEL.mlpackage/$f" "$base/$f"
     done
 fi
+# No ready-made Core ML port exists for the video model; the one-off conversion needs uv (it fetches PyTorch).
+if [[ ! -d Models/$VIDEO_MODEL.mlpackage ]]; then
+    uv run convert_video_model.py "Models/$VIDEO_MODEL.mlpackage"
+fi
 
 # The explicit platform_version stamps the real SDK, so macOS 26+ draws the Liquid Glass design.
 swift build -c release -Xlinker -platform_version -Xlinker macos -Xlinker "$MIN_MACOS" \
-    -Xlinker "$(xcrun --show-sdk-version)"
+    -Xlinker "$(xcrun --sdk macosx --show-sdk-version)"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/DepthAnything "$APP/Contents/MacOS/"
-xcrun coremlcompiler compile "Models/$MODEL.mlpackage" "$APP/Contents/Resources" >/dev/null
+for m in $MODEL $VIDEO_MODEL; do xcrun coremlcompiler compile "Models/$m.mlpackage" "$APP/Contents/Resources" >/dev/null; done
 # AppIcon.icon is an Icon Composer document: Assets.car (Liquid Glass on macOS 26+) plus AppIcon.icns for older systems.
 xcrun actool AppIcon.icon --compile "$APP/Contents/Resources" --app-icon AppIcon --include-all-app-icons \
     --platform macosx --target-device mac --minimum-deployment-target "$MIN_MACOS" \
@@ -47,10 +52,10 @@ cat > "$APP/Contents/Info.plist" <<EOF
     <key>NSHighResolutionCapable</key><true/>
     <key>CFBundleDocumentTypes</key>
     <array><dict>
-        <key>CFBundleTypeName</key><string>Image</string>
+        <key>CFBundleTypeName</key><string>Image or Video</string>
         <key>CFBundleTypeRole</key><string>Viewer</string>
         <key>LSHandlerRank</key><string>Alternate</string>
-        <key>LSItemContentTypes</key><array><string>public.image</string><string>public.folder</string></array>
+        <key>LSItemContentTypes</key><array><string>public.image</string><string>public.movie</string><string>public.folder</string></array>
     </dict></array>
 </dict>
 </plist>

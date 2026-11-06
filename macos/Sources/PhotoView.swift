@@ -1,8 +1,8 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-struct ContentView: View {
-    @Bindable var store: Store
+struct PhotoView: View {
+    @Bindable var store: PhotoStore
     @AppStorage("palette") private var palette = Palette.spectral
     @AppStorage("viewMode") private var mode = ViewMode.depth
     @State private var importing = false
@@ -24,7 +24,7 @@ struct ContentView: View {
         .navigationTitle(store.selected?.name ?? "No Image")
         .navigationSubtitle(subtitle)
         .toolbar { toolbar }
-        .dropDestination(for: URL.self) { urls, _ in store.add(urls); return true }
+        .dropDestination(for: URL.self) { urls, _ in store.add(urls) > 0 }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.image, .folder],
                       allowsMultipleSelection: true) { result in
             if case .success(let urls) = result { store.add(urls) }
@@ -81,13 +81,8 @@ struct ContentView: View {
     }
 
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
-        ToolbarItem(placement: .principal) {
-            Picker("Show", selection: $mode) {
-                ForEach(ViewMode.allCases) { Text($0.title).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .help("Show the depth map alone or next to the original")
-        }
+        WorkspaceToolbarItem()
+        ToolbarItem(placement: .principal) { ModePicker(mode: $mode) }
         if store.isBusy {
             ToolbarItem { ProgressView().controlSize(.small) }
                 .withoutSharedBackground()
@@ -95,13 +90,7 @@ struct ContentView: View {
         ToolbarItemGroup {
             Button("Add Images…", systemImage: "plus") { importing = true }
                 .help("Add images or folders")
-            Menu("Palette", systemImage: "paintpalette") {
-                Picker("Palette", selection: $palette) {
-                    ForEach(Palette.allCases) { Text($0.title).tag($0) }
-                }
-                .pickerStyle(.inline)
-            }
-            .help("Depth map colors")
+            PaletteMenu(palette: $palette)
         }
         ToolbarGap()
         ToolbarItem {

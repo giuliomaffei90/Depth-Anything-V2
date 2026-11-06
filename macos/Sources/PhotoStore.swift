@@ -15,7 +15,7 @@ import UniformTypeIdentifiers
     var isDone: Bool { depth != nil || error != nil }
 }
 
-@MainActor @Observable final class Store {
+@MainActor @Observable final class PhotoStore {
     var items: [ImageItem] = []
     var selection: ImageItem.ID?
     private(set) var processed = 0
@@ -27,19 +27,14 @@ import UniformTypeIdentifiers
     var selected: ImageItem? { items.first { $0.id == selection } }
     var isBusy: Bool { processed < queued }
 
-    /// Images, or folders of images (run.py's `--img-path` directory mode).
-    func add(_ urls: [URL]) {
-        let files = urls.flatMap { url -> [URL] in
-            guard (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true else { return [url] }
-            let all = FileManager.default.enumerator(at: url, includingPropertiesForKeys: nil)?.allObjects as? [URL] ?? []
-            return all.sorted { $0.path < $1.path }
-        }.filter { UTType(filenameExtension: $0.pathExtension)?.conforms(to: .image) == true }
-
-        let new = files.map(ImageItem.init)
+    /// Images, or folders of images (run.py's `--img-path` directory mode). Returns how many were added.
+    @discardableResult func add(_ urls: [URL]) -> Int {
+        let new = mediaFiles(in: urls, conformingTo: .image).map(ImageItem.init)
         items += new
         if selection == nil { selection = new.first?.id }
         queued += new.count
         process(new)
+        return new.count
     }
 
     func remove(_ id: ImageItem.ID) {
