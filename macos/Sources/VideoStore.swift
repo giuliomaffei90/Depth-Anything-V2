@@ -84,16 +84,16 @@ import UniformTypeIdentifiers
         }
     }
 
-    /// Writes what the preview shows (depth alone or side by side, with the original audio) as an MPEG-4 movie.
-    func export(_ items: [VideoItem], mode: ViewMode, palette: Palette, to destination: (VideoItem) -> URL) async -> Bool {
+    /// Writes the depth map alone (side by side is only for checking), with the original audio, as an MPEG-4 movie.
+    func export(_ items: [VideoItem], palette: Palette, to destination: (VideoItem) -> URL) async -> Bool {
         exporting = true
         defer { exporting = false }
         for item in items {
             guard let depth = item.depth else { continue }
-            let asset = AVURLAsset(url: item.url)
             let url = destination(item)
             try? FileManager.default.removeItem(at: url)
-            guard let composition = try? await depthComposition(asset, depth, mode, palette),
+            guard let asset = try? await videoAndAudio(of: AVURLAsset(url: item.url)),
+                  let composition = try? await depthComposition(asset, depth, .depth, palette),
                   let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality)
             else { return false }
             session.videoComposition = composition
@@ -104,6 +104,20 @@ import UniformTypeIdentifiers
         }
         return true
     }
+}
+
+/// The first video track and the audio of `asset`: export can't decode the extra tracks of a Cinematic mode clip
+/// (disparity and metadata).
+func videoAndAudio(of asset: AVAsset) async throws -> AVAsset {
+    let composition = AVMutableComposition()
+    let range = CMTimeRange(start: .zero, duration: try await asset.load(.duration))
+    let tracks = try await asset.loadTracks(withMediaType: .video).prefix(1) + asset.loadTracks(withMediaType: .audio)
+    for track in tracks {
+        let copy = composition.addMutableTrack(withMediaType: track.mediaType, preferredTrackID: kCMPersistentTrackID_Invalid)!
+        try copy.insertTimeRange(range, of: track, at: .zero)
+        copy.preferredTransform = try await track.load(.preferredTransform)
+    }
+    return composition
 }
 
 /// Plays or exports `asset` with each frame replaced by its depth map, or placed next to it like run.py does.

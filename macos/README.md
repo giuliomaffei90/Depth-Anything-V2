@@ -3,10 +3,12 @@
 A native SwiftUI app with three alike workspaces, switched from the toolbar or with ⌘1 / ⌘2 / ⌘3:
 
 - **Photos** runs Depth Anything V2 on images, like `run.py`: add images or folders, see the relative depth map
-  alone or side by side with the original, in the Spectral or grayscale palette, and export one PNG or the whole batch.
+  alone or side by side with the original (for checking), in the Spectral or grayscale palette, and export the depth
+  maps as one PNG or the whole batch.
 - **Videos** runs [Video Depth Anything](https://github.com/DepthAnything/Video-Depth-Anything) on videos, with its
   32-frame windows and keyframe alignment, so the depth stays consistent from frame to frame: preview it in a player
-  (alone or side by side, either palette) and export one MPEG-4 movie or the whole batch, with the original audio.
+  (alone or side by side for checking, either palette) and export the depth as one MPEG-4 movie or the whole batch,
+  with the original audio.
 - **Cinematic** extracts the depth an iPhone records in Cinematic mode (the clip's disparity track, read with Apple's
   Cinematic framework, no model), with the same player and export as Videos.
 

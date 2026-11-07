@@ -97,12 +97,12 @@ struct PhotoView: View {
             Button("Export…", action: export)
                 .prominentButton()
                 .disabled(store.selected?.depth == nil)
-                .help("Save the current view as a PNG")
+                .help("Save the depth map as a PNG")
         }
     }
 
     private func export() {
-        guard let image = store.selected?.rendered(mode, palette) else { return }
+        guard let image = store.selected?.rendered(.depth, palette) else { return }
         exportFile = PNGFile(data: pngData(image))
     }
 
@@ -112,7 +112,7 @@ struct PhotoView: View {
         defer { if accessing { folder.stopAccessingSecurityScopedResource() } }
         do {
             for item in store.items {
-                guard let image = item.rendered(mode, palette) else { continue }
+                guard let image = item.rendered(.depth, palette) else { continue }
                 try pngData(image).write(to: folder.appending(path: item.name + "-depth.png"))
             }
         } catch {

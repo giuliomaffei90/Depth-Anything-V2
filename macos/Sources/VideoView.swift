@@ -89,7 +89,7 @@ struct VideoView: View {
             Button("Export…", action: export)
                 .prominentButton()
                 .disabled(store.selected?.depth == nil || store.exporting)
-                .help("Save the current view as an MPEG-4 movie")
+                .help("Save the depth map as an MPEG-4 movie")
         }
     }
 
@@ -113,7 +113,7 @@ struct VideoView: View {
         panel.allowedContentTypes = [.mpeg4Movie]
         panel.nameFieldStringValue = item.name + "-depth.mp4"
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        Task { exportFailed = await !store.export([item], mode: mode, palette: palette) { _ in url } }
+        Task { exportFailed = await !store.export([item], palette: palette) { _ in url } }
     }
 
     /// One movie per video in the chosen folder, like the photo workspace's Export All.
@@ -121,7 +121,7 @@ struct VideoView: View {
         Task {
             let accessing = folder.startAccessingSecurityScopedResource()
             defer { if accessing { folder.stopAccessingSecurityScopedResource() } }
-            exportFailed = await !store.export(store.items, mode: mode, palette: palette) {
+            exportFailed = await !store.export(store.items, palette: palette) {
                 folder.appending(path: $0.name + "-depth.mp4")
             }
         }
